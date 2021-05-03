@@ -1,0 +1,90 @@
+GET http://0.0.0.0:5000/api/forum/8Wn-OwAMXO5FS/threads?desc=true&limit=4&since=2020-06-15T20%3A19%3A17.988Z HTTP/1.1
+Accept: application/json
+
+###
+POST http://0.0.0.0:5000/api/thread/abc/vote
+Content-Type: application/json
+
+{
+  "nickname": "tester",
+  "voice": 1
+}
+
+###
+GET http://0.0.0.0:5000/api/forum/provided_slug/users
+Accept: application/json
+
+###
+GET http://0.0.0.0:5000/api/service/status
+Accept: application/json
+
+###
+POST http://0.0.0.0:5000/api/thread/abc/details
+Content-Type: application/json
+
+{
+  "title": "Davy Jones cache",
+  "message": "An urgent need to reveal the hiding place of Davy Jones. Who is willing to help in this matter?"
+}
+
+###
+GET http://0.0.0.0:5000/api/thread/absc/details
+Accept: application/json
+
+###
+POST http://0.0.0.0:5000/api/forum/pirate-stories/create
+Content-Type: application/json
+
+{
+  "title": "Davy Jones cache",
+  "author": "nick_nick",
+  "message": "An urgent need to reveal the hiding place of Davy Jones. Who is willing to help in this matter?",
+  "created": "2017-01-01T00:00:00.000Z"
+}
+
+###
+GET http://0.0.0.0:5000/api/forum/provided_slug/threads?since=2021-05-04
+Accept: application/json
+
+###
+GET http://0.0.0.0:5000/api/forum/pirate-stories/details
+Accept: application/json
+
+###
+POST http://0.0.0.0:5000/api/forum/create
+Content-Type: application/json
+
+{
+  "title": "Pirate stories",
+  "user": "new_nick",
+  "slug": "pirate-storlies"
+}
+
+
+###
+POST http://0.0.0.0:5000/api/user/new_nick/profile
+Content-Type: application/json
+
+{
+  "fullname": "Captain Jack Sparrow",
+  "about": "This is the day you will always remember as the day that you almost caught Captain Jack Sparrow!",
+  "email": "email"
+}
+
+###
+GET http://0.0.0.0:5000/api/user/new_aanick/profile
+Accept: application/json
+
+###
+POST http://0.0.0.0:5000/api/user/new_nick/create
+Content-Type: application/json
+
+{
+  "profile": {
+    "fullname": "nikita_full_name",
+    "email": "email",
+    "about": ""
+  }
+}
+
+###

@@ -1,1 +1,6 @@
 .idea
+node_modules
+dist
+gen
+report.html
+*.log
