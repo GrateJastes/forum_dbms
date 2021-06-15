@@ -93,6 +93,7 @@ export class PostsController extends Controller {
     return Post.getPost(postID, related as string[]).then((res) => {
       switch (res.status) {
       case 'ok':
+        // console.log(res.result.forum);
         reply.code(200).header('Content-Type', 'application/json; charset=utf-8').send(res.result);
         break;
       case 'not-found':
@@ -117,7 +118,7 @@ export class PostsController extends Controller {
         reply.code(404).header('Content-Type', 'application/json; charset=utf-8').send({ message: `Can't find post with id: ${postID}` });
         break;
       default:
-        reply.code(500).send();
+        reply.code(500).header('Content-Type', 'application/json; charset=utf-8').send(res.result);
       }
     });
   }

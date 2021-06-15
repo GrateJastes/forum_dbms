@@ -48,7 +48,7 @@ export class UsersController extends Controller {
         reply.code(404).header('Content-Type', 'application/json; charset=utf-8').send({ message: `Can't find user with nickname ${nickname}` });
         break;
       default:
-        reply.code(500).send();
+        reply.code(500).header('Content-Type', 'application/json; charset=utf-8').send(res.result);
       }
     });
   }

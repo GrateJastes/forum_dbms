@@ -10,41 +10,37 @@ export interface IForumCreationInfo {
 
 export class Forum extends Model {
   private static createForumSQL = `
-  INSERT INTO forums as f (title, user_id, slug) VALUES
-  (
-      $1,
-      (SELECT id from users where nickname = $2),
-      $3
-  ) 
-  RETURNING slug
-  `;
+  INSERT INTO forums as f (title, "user", slug) VALUES
+  ($1, (SELECT nickname FROM users WHERE nickname = $2), $3)
+  RETURNING title, "user", slug, threads, 0 as posts`;
 
   private static extractInfoSQL = `
-  SELECT f.title, f.slug, u.nickname as user, f.threads, count(p.id) as posts
+  SELECT f.title, f.slug, f.user, f.threads, count(p.id) as posts
   FROM forums as f
-  JOIN users u on u.id = f.user_id and f.slug=$1
-  LEFT JOIN threads t on f.id = t.forum_id
+  LEFT JOIN threads t on f.slug = t.forum_slug
   LEFT JOIN posts p on p.thread_id = t.id
-  GROUP BY f.title, f.slug, u.nickname, f.threads`;
+  WHERE f.slug = $1
+  GROUP BY f.title, f.slug, f.user, f.threads`;
 
   private static makeThreadsSQL(params: IGetParams) {
     return `
-      SELECT t.id, t.title, u.nickname as author, f.slug as forum, t.message, t.votes, t.slug as slug, t.created
+      SELECT t.id, t.title, t.author, t.forum_slug as forum, t.message, t.votes, t.slug, t.created
       FROM threads as t
-      JOIN users as u on u.id = t.author_id
-      JOIN forums as f on t.forum_id = f.id
-      WHERE f.slug = $1 ${params.since ? `AND t.created ${params.desc ? '<=' : '>='} $2` : ''}
+      JOIN forums as f on t.forum_slug = f.slug
+      WHERE f.slug = $1 ${params.since ? `AND t.created ${params.desc ? '<=' : '>='} $3` : ''}
       ORDER BY created ${params.desc ? 'DESC' : 'ASC'}
-      LIMIT ${params.since ? '$3' : '$2'}
-    `;
+      LIMIT $2`;
   }
 
   static createForum(forumInfo: IForumCreationInfo) {
     return database.pool.connect().then((client) => client
       .query(this.createForumSQL, [forumInfo.title, forumInfo.user, forumInfo.slug])
-      .then((res) => this.extractForumInfo(client, res.rows[0].slug, 'ok'))
+      .then((res) => ({ result: res.rows[0], status: 'ok' }))
       .catch((err) => {
-        if (!err.detail.includes('already exists')) return ({ status: 'not-found', result: {} });
+        if (!err.detail.includes('already exists')) {
+          return ({ status: 'not-found', result: {} });
+        }
+
         return this.extractForumInfo(client, forumInfo.slug, 'conflict');
       })
       .finally(() => client.release()));
@@ -52,6 +48,10 @@ export class Forum extends Model {
 
   static getForumInfo(slug: string) {
     return database.pool.connect().then((client) => this.extractForumInfo(client, slug, 'ok')
+      .then((res) => (!res.result ? ({
+        result: {},
+        status: 'not-found',
+      }) : res))
       .catch((err) => ({
         result: {},
         status: 'not-found',
@@ -62,11 +62,10 @@ export class Forum extends Model {
   static getForumThreads(forumSlug: string, params: IGetParams) {
     return database.pool.connect().then((client) => {
       const sql = this.makeThreadsSQL(params);
-      const attrs = [forumSlug];
+      const attrs = [forumSlug, params.limit];
       if (params.since) {
         attrs.push(params.since);
       }
-      attrs.push(`${params.limit}`);
 
       return client
         .query(sql, attrs)

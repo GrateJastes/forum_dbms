@@ -12,11 +12,11 @@ import { ServiceController } from './Controllers/ServiceController.js';
 import { PostsController } from './Controllers/PostsController.js';
 
 const fastifyInstance = fastify({
-  logger: false,
-  // logger: {
-  //   level: 'info',
-  //   file: './logs.log',
-  // },
+  // logger: false,
+  logger: {
+    level: 'info',
+    file: './logs.log',
+  },
 });
 
 fastifyInstance.post(constants.paths.userCreate, UsersController.createUser);
@@ -29,20 +29,24 @@ fastifyInstance.post(constants.paths.forumCreate, ForumsController.createForum);
 fastifyInstance.get(constants.paths.getForum, ForumsController.getForum);
 fastifyInstance.get(constants.paths.forumThreads, ForumsController.getForumThreads);
 
+
 fastifyInstance.post(constants.paths.threadCreate, ThreadsController.createThread);
 fastifyInstance.get(constants.paths.getThread, ThreadsController.getThread);
 fastifyInstance.post(constants.paths.updateThread, ThreadsController.updateThreadInfo);
 fastifyInstance.post(constants.paths.threadVote, ThreadsController.voteForThread);
+
 
 fastifyInstance.post(constants.paths.postCreate, PostsController.createPosts);
 fastifyInstance.get(constants.paths.getPosts, PostsController.getPosts);
 fastifyInstance.get(constants.paths.getPostInfo, PostsController.getOnePost);
 fastifyInstance.post(constants.paths.updatePostInfo, PostsController.updatePost);
 
+
 fastifyInstance.get(constants.paths.serviceStatus, ServiceController.getStatus);
 fastifyInstance.post(constants.paths.clearAll, ServiceController.clearAll);
 
-const port = process.env.PORT || 'fuck ts';
+
+const port = process.env.PORT || '5000';
 
 fastifyInstance.addContentTypeParser(
   'application/json',
