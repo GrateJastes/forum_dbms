@@ -4,3 +4,4 @@ dist
 gen
 report.html
 *.log
+*.gz
