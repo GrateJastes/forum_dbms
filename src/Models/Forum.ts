@@ -24,10 +24,9 @@ export class Forum extends Model {
 
   private static makeThreadsSQL(params: IGetParams) {
     return `
-      SELECT t.id, t.title, t.author, t.forum_slug as forum, t.message, t.votes, t.slug, t.created
-      FROM threads as t
-      JOIN forums as f on t.forum_slug = f.slug
-      WHERE f.slug = $1 ${params.since ? `AND t.created ${params.desc ? '<=' : '>='} $3` : ''}
+      SELECT id, title, author, forum_slug as forum, message, votes, slug, created
+      FROM threads
+      WHERE forum_slug = $1 ${params.since ? `AND created ${params.desc ? '<=' : '>='} $3` : ''}
       ORDER BY created ${params.desc ? 'DESC' : 'ASC'}
       LIMIT $2`;
   }

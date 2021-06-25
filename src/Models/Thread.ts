@@ -17,9 +17,9 @@ export interface IThreadUpdateInfo {
 export class Thread extends Model {
   static threadExtractingSQL(slugOrID: string) {
     return `
-    SELECT t.id, t.title, t.author, t.forum_slug as forum, t.message, t.votes, t.slug, t.created
+    SELECT id, title, author, forum_slug as forum, message, votes, slug, created
     FROM threads t
-    WHERE t.${Number.isNaN(Number(slugOrID)) ? 'slug' : 'id'} = $1`;
+    WHERE ${Number.isNaN(Number(slugOrID)) ? 'slug' : 'id'} = $1`;
   }
 
   static createThread(forumSlug: string, threadInfo: IThreadCreationInfo) {

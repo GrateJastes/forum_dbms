@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import { PoolClient } from 'pg';
 import { Model } from './Model.js';
 import { database } from '../modules/db/db-connector.js';
 import { IGetThreadPostsQuery } from '../Controllers/PostsController';
@@ -27,52 +28,89 @@ export class Post extends Model {
       return post;
     });
 
-    const postsCreationSQL = `
-    INSERT INTO posts as p (author, message, parent, created, thread_id, forum_slug) VALUES 
-    ${postsData.map((post, i) => `
-    (
-      $${i + 2},
-      $${postsData.length + i + 2},
-      $${postsData.length * 2 + i + 2},
-      '${post.created}',
-      ${isSlug ? '(SELECT id FROM threads as t WHERE slug = $1)' : '$1'},
-      (SELECT forum_slug FROM threads WHERE ${isSlug ? 'slug' : 'id'} = $1)
-    )`)}
-    RETURNING p.id, p.author, p.parent, p.is_edited as isEdited, p.created, p.thread_id as thread, p.message, p.forum_slug as forum`;
-
-    const postsCreationValues = [slugOrID]
-      .concat(postsData.map((post) => post.author))
-      .concat(postsData.map((post) => post.message))
-      .concat(postsData.map((post) => `${post.parent}`));
-
     return database.pool.connect().then((client) => client
-      .query(postsCreationSQL, postsCreationValues)
-      .then((creationResults) => Promise
-        .all(creationResults.rows
-          .map((result) => client.query('SELECT id FROM posts WHERE $1 = 0 OR (id = $1 AND thread_id = $2)', [result.parent, result.thread])))
-        .then((results) => results.every((postInfo) => postInfo.rows.length > 0))
-        .then((parentsValid) => (parentsValid ? ({
-          result: creationResults.rows,
-          status: 'ok',
-        }) : ({ result: {}, status: 'conflict' }))))
+      .query(`SELECT id FROM threads WHERE ${isSlug ? 'slug' : 'id'} = $1`, [slugOrID])
+      .then((res) => {
+        if (!res.rows.length) {
+          throw new Error('Thread not found');
+        }
+
+        return this.createPostsByThreadID(client, res.rows[0].id, postsData);
+      })
       .catch((err) => {
+        if (err.message === 'Thread not found') {
+          return ({ result: {}, status: 'not-found' });
+        }
+
+        return ({ result: err, status: 'error' });
+      })
+      .finally(() => client.release()));
+  }
+
+  static createPostsByThreadID(client: PoolClient, threadID: number, postsData: IPostCreationData[]) {
+    return Promise
+      .all(postsData.map((post) => {
+        if (post.parent) {
+          return client.query(`SELECT id FROM posts WHERE id = $1 AND thread_id = $2`, [post.parent, threadID]);
+        }
+
+        return new Promise((resolve, reject) => resolve({ rows: [1] }));
+      }))
+      .then((checkResults) => checkResults.every((checkRes) => checkRes.rows.length > 0))
+      .then((parentsValid) => {
+        if (!parentsValid) {
+          throw new Error('Parents are invalid');
+        }
+      })
+      .then(() => client
+        .query(`SELECT forum_slug FROM threads WHERE id = $1`, [threadID])
+        .then((forumSlugQuery) => {
+          const forumSlug = forumSlugQuery.rows[0].forum_slug;
+          const postsCreationValues = [threadID, forumSlug]
+            .concat(postsData.map((post) => post.author))
+            .concat(postsData.map((post) => post.message))
+            .concat(postsData.map((post) => `${post.parent}`));
+
+          const postsCreationSQL = `
+            INSERT INTO posts as p (author, message, parent, created, thread_id, forum_slug) VALUES 
+            ${postsData.map((post, i) => `
+            (
+              $${i + 3},
+              $${postsData.length + i + 3},
+              $${postsData.length * 2 + i + 3},
+              '${post.created}',
+              $1,
+              $2
+            )`)}
+            RETURNING p.id, p.created`;
+
+          return client
+            .query(postsCreationSQL, postsCreationValues)
+            .then((creationResults) => creationResults.rows.map((resultData, i) => {
+              resultData.author = postsData[i].author;
+              resultData.message = postsData[i].message;
+              resultData.isEdited = false;
+              resultData.forum = forumSlug;
+              resultData.thread = threadID;
+              resultData.parent = postsData[i].parent;
+
+              return resultData;
+            }))
+            .then((createdPosts) => ({ result: createdPosts, status: 'ok' }));
+        }))
+      .catch((err) => {
+        if (err.message === 'Parents are invalid') {
+          return ({ result: {}, status: 'conflict' });
+        }
+
         if (postsData.length) {
           return err.code === '00409' ? ({ result: {}, status: 'conflict' }) : ({
             result: err,
             status: 'not-found',
           });
         }
-
-        return client
-          .query(`SELECT ${isSlug ? 'slug' : 'id'} FROM threads WHERE ${isSlug ? 'slug' : 'id'} = $1`, [slugOrID])
-          .then((res) => {
-            if (res.rows.length) {
-              return ({ result: [], status: 'ok' });
-            }
-            return ({ result: {}, status: 'not-found' });
-          });
-      })
-      .finally(() => client.release()));
+        return ({ result: [], status: 'ok' });
+      });
   }
 
   static getPostsByThread(slugOrID: string, getParams: IGetThreadPostsQuery) {

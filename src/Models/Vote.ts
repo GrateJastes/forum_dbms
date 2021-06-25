@@ -28,7 +28,7 @@ export class Vote extends Model {
             )
             .then((res) => client
               .query(
-                `UPDATE threads as t SET votes = votes ${voice * 2} WHERE id = $1
+                `UPDATE threads as t SET votes = votes + ${voice * 2} WHERE id = $1
                 RETURNING t.id, t.title, t.author, t.forum_slug as forum, t.message, t.votes, t.slug, t.created`,
                 [selectResult.rows[0].thread_id],
               )

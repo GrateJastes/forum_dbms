@@ -1,3 +1,11 @@
+CREATE EXTENSION IF NOT EXISTS CITEXT;
+
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS forums CASCADE;
+DROP TABLE IF EXISTS threads CASCADE;
+DROP TABLE IF EXISTS posts CASCADE;
+DROP TABLE IF EXISTS votes CASCADE;
+
 create table if not exists users
 (
     id       serial not null,

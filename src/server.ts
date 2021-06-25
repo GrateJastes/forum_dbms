@@ -12,11 +12,11 @@ import { ServiceController } from './Controllers/ServiceController.js';
 import { PostsController } from './Controllers/PostsController.js';
 
 const fastifyInstance = fastify({
-  // logger: false,
-  logger: {
-    level: 'info',
-    file: './logs.log',
-  },
+  logger: false,
+  // logger: {
+  //   level: 'info',
+  //   file: './logs.log',
+  // },
 });
 
 fastifyInstance.post(constants.paths.userCreate, UsersController.createUser);
